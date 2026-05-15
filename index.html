@@ -645,9 +645,13 @@
         submitBtn.textContent = 'Sending...';
 
         try {
-          // Using text/plain avoids CORS preflight on Google Apps Script.
-          const res = await fetch(endpoint, {
+          // Google Apps Script web apps don't return CORS headers, so we use
+          // mode: 'no-cors'. The POST still reaches the script and writes the
+          // row to the sheet — we just can't read the response. If fetch
+          // resolves without throwing, we treat that as success.
+          await fetch(endpoint, {
             method: 'POST',
+            mode: 'no-cors',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({
               email: email,
@@ -656,21 +660,10 @@
             })
           });
 
-          // Apps Script returns JSON; parse if possible.
-          let ok = res.ok;
-          try {
-            const data = await res.json();
-            ok = ok && (data.success !== false);
-          } catch (_) { /* response body might be opaque, that's fine */ }
-
-          if (ok) {
-            showMessage(messageEl,
-              "You're on the list. We'll be in touch soon.",
-              'success');
-            form.reset();
-          } else {
-            throw new Error('Server returned an error');
-          }
+          showMessage(messageEl,
+            "You're on the list. We'll be in touch soon.",
+            'success');
+          form.reset();
         } catch (err) {
           showMessage(messageEl,
             "Something went wrong. Please try again in a moment.",
